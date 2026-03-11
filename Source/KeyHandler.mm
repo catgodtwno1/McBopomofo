@@ -364,8 +364,9 @@ InputMode InputModePlainBopomofo = @"org.openvanilla.inputmethod.McBopomofo.Plai
     // Caps Lock processing : if Caps Lock is on, temporarily disable bopomofo.
     if (charCode == 8 || charCode == 13 || input.isAbsorbedArrowKey || input.isExtraChooseCandidateKey || input.isCursorForward || input.isCursorBackward) {
         // do nothing if backspace is pressed -- we ignore the key
-    } else if (input.isCapsLockOn) {
-        // process all possible combination, we hope.
+    } else if (input.isCapsLockOn && Preferences.toggleInputModeKey == ToggleInputModeKeyCapsLock) {
+        // Caps Lock processing: if Caps Lock is on and it's the selected toggle key,
+        // temporarily disable bopomofo.
         [self clear];
         InputStateEmpty *emptyState = [[InputStateEmpty alloc] init];
         stateCallback(emptyState);

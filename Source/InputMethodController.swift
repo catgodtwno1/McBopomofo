@@ -59,6 +59,17 @@ class McBopomofoInputMethodController: IMKInputController {
     // Share the stored issues, so a set of issues is shown as notification only once.
     static var latestUserFileIssues: [String] = []
 
+    // MARK: - Shift Toggle State
+
+    /// Whether the Shift key is currently held down (for single-press detection)
+    private var shiftKeyPressed = false
+    /// Timestamp when Shift was pressed down
+    private var shiftKeyPressedTimestamp: TimeInterval = 0
+    /// Whether any non-modifier key was pressed while Shift was held
+    private var keyPressedBetweenShiftDown = false
+    /// Whether we are currently in alphanumeric (English) mode via Shift toggle
+    private var isAlphanumericMode = false
+
     // MARK: - IMKInputController methods
 
     override init!(server: IMKServer!, delegate: Any!, client inputClient: Any!) {
@@ -175,6 +186,11 @@ class McBopomofoInputMethodController: IMKInputController {
         // reset the state
         currentClient = client
 
+        // Reset Shift toggle state
+        isAlphanumericMode = false
+        shiftKeyPressed = false
+        keyPressedBetweenShiftDown = false
+
         keyHandler.clear()
         keyHandler.syncWithPreferences()
 
@@ -225,6 +241,36 @@ class McBopomofoInputMethodController: IMKInputController {
         }
 
         if event.type == .flagsChanged {
+            // MARK: Shift Toggle Detection
+            if Preferences.toggleInputModeKey == .shift {
+                let shiftDown = event.modifierFlags.contains(.shift)
+                let onlyShift = event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .shift
+                    || event.modifierFlags.intersection(.deviceIndependentFlagsMask).isEmpty
+
+                if shiftDown && event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .shift {
+                    // Shift was just pressed
+                    shiftKeyPressed = true
+                    keyPressedBetweenShiftDown = false
+                    shiftKeyPressedTimestamp = event.timestamp
+                } else if !shiftDown && shiftKeyPressed {
+                    // Shift was just released
+                    shiftKeyPressed = false
+                    let elapsed = event.timestamp - shiftKeyPressedTimestamp
+                    if !keyPressedBetweenShiftDown && elapsed < 0.5 {
+                        // Single Shift press detected - toggle Chinese/English
+                        isAlphanumericMode = !isAlphanumericMode
+                        // Commit any active input
+                        if !(state is InputState.Empty) {
+                            keyHandler.clear()
+                            handle(state: InputState.Empty(), client: client)
+                        }
+                        // Show toggle notification
+                        let message = isAlphanumericMode ? "英" : "中"
+                        NotifierController.notify(message: message)
+                    }
+                }
+            }
+
             if state is InputState.Empty {
                 return false
             }
@@ -237,24 +283,17 @@ class McBopomofoInputMethodController: IMKInputController {
             return true
         }
 
-        if event.type == .flagsChanged {
-            let functionKeyKeyboardLayoutID = Preferences.functionKeyboardLayout
-            let basisKeyboardLayoutID = Preferences.basisKeyboardLayout
+        // Track that a key was pressed (for Shift toggle detection)
+        if shiftKeyPressed {
+            keyPressedBetweenShiftDown = true
+        }
 
-            if functionKeyKeyboardLayoutID == basisKeyboardLayoutID {
-                return false
+        // When in alphanumeric mode (via Shift toggle), pass through to system
+        if isAlphanumericMode && Preferences.toggleInputModeKey == .shift {
+            if !(state is InputState.Empty) {
+                keyHandler.clear()
+                handle(state: InputState.Empty(), client: client)
             }
-
-            let includeShift = Preferences.functionKeyKeyboardLayoutOverrideIncludeShiftKey
-            let notShift = NSEvent.ModifierFlags(rawValue: ~(NSEvent.ModifierFlags.shift.rawValue))
-            if event.modifierFlags.contains(notShift)
-                || (event.modifierFlags.contains(.shift) && includeShift)
-            {
-                (client as? IMKTextInput)?.overrideKeyboard(
-                    withKeyboardNamed: functionKeyKeyboardLayoutID)
-                return false
-            }
-            (client as? IMKTextInput)?.overrideKeyboard(withKeyboardNamed: basisKeyboardLayoutID)
             return false
         }
 

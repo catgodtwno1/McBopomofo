@@ -52,6 +52,8 @@ private let kWindowTitleHeight: CGFloat = 78
 
     @IBOutlet weak var addPhraseHookPathField: NSTextField!
 
+    private var toggleInputModeKeyPopUpButton: NSPopUpButton?
+
     override func awakeFromNib() {
         let toolbar = NSToolbar(identifier: "preference toolbar")
         toolbar.allowsUserCustomization = false
@@ -203,6 +205,57 @@ private let kWindowTitleHeight: CGFloat = 78
         customUserPhraseLocationEnabledButton.selectItem(at: index)
         updateUserPhraseLocation()
         addPhraseHookPathField.stringValue = Preferences.addPhraseHookPath
+
+        // Set up Toggle Input Mode Key popup
+        setupToggleInputModeKeyUI()
+    }
+
+    private func setupToggleInputModeKeyUI() {
+        guard let basicView = basicSettingsView else { return }
+
+        // Create label
+        let label = NSTextField(labelWithString: NSLocalizedString("Chinese/English Toggle Key:", comment: ""))
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
+
+        // Create popup button
+        let popup = NSPopUpButton(frame: .zero, pullsDown: false)
+        popup.translatesAutoresizingMaskIntoConstraints = false
+        popup.addItem(withTitle: "Shift（單擊切換）")
+        popup.addItem(withTitle: "Caps Lock")
+        popup.selectItem(at: Preferences.toggleInputModeKey.rawValue)
+        popup.target = self
+        popup.action = #selector(changeToggleInputModeKeyAction(_:))
+        toggleInputModeKeyPopUpButton = popup
+
+        // Create a container view
+        let container = NSView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(label)
+        container.addSubview(popup)
+
+        // Add container to basic settings view at the bottom
+        basicView.addSubview(container)
+
+        // Layout constraints
+        NSLayoutConstraint.activate([
+            container.leadingAnchor.constraint(equalTo: basicView.leadingAnchor, constant: 20),
+            container.trailingAnchor.constraint(equalTo: basicView.trailingAnchor, constant: -20),
+            container.bottomAnchor.constraint(equalTo: basicView.bottomAnchor, constant: -16),
+            container.heightAnchor.constraint(equalToConstant: 28),
+
+            label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+
+            popup.leadingAnchor.constraint(equalTo: label.trailingAnchor, constant: 8),
+            popup.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+            popup.widthAnchor.constraint(greaterThanOrEqualToConstant: 160),
+        ])
+    }
+
+    @objc func changeToggleInputModeKeyAction(_ sender: Any) {
+        guard let popup = sender as? NSPopUpButton else { return }
+        Preferences.toggleInputModeKey = ToggleInputModeKey(rawValue: popup.indexOfSelectedItem) ?? .shift
     }
 
     @IBAction func updateBasisKeyboardLayoutAction(_ sender: Any) {

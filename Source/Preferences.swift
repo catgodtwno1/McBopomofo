@@ -51,6 +51,7 @@ private let kChineseConversionStyleKey = "ChineseConversionStyle"
 private let kAssociatedPhrasesEnabledKey = "AssociatedPhrasesEnabled"
 private let kLetterBehaviorKey = "LetterBehavior"
 private let kControlEnterOutputKey = "ControlEnterOutput"
+private let kToggleInputModeKeyKey = "ToggleInputModeKey"
 private let kShiftEnterEnabledKey = "ShiftEnterEnabled"
 private let kRepeatedPunctuationToSelectCandidateEnabledKey =
     "RepeatedPunctuationToSelectCandidateEnabled"
@@ -456,6 +457,11 @@ extension Preferences {
     @objc static var repeatedPunctuationToSelectCandidateEnabled: Bool
 }
 
+@objc enum ToggleInputModeKey: Int {
+    case shift = 0
+    case capsLock = 1
+}
+
 @objc enum ControlEnterOutput: Int {
     case off = 0
     case bpmfReading = 1
@@ -490,6 +496,13 @@ extension Preferences {
     /// - 1: Output BPMF readings.
     @EnumUserDefault(key: kControlEnterOutputKey, defaultValue: .off)
     @objc static var controlEnterOutput: ControlEnterOutput
+
+    /// The key used to toggle between Chinese and English input modes.
+    ///
+    /// - 0: Shift (single press to toggle, default)
+    /// - 1: Caps Lock (traditional behavior)
+    @EnumUserDefault(key: kToggleInputModeKeyKey, defaultValue: .shift)
+    @objc static var toggleInputModeKey: ToggleInputModeKey
 }
 
 @objc class UserPhraseLocationHelper: NSObject {

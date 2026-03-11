@@ -176,3 +176,6 @@
 
 /* Used when the user attempts to mark a phrase when the annotation mode is on. */
 "Cannot add new phrases when Bopomofo annotation is on" = "Cannot add new phrases when Bopomofo annotation is on";
+
+/* Label for Chinese/English toggle key preference */
+"Chinese/English Toggle Key:" = "Chinese/English Toggle Key:";
